@@ -47,6 +47,26 @@ namespace Lidgren.Network
 		public uint UIntValue;
 	}
 
+	/// <summary>
+	/// Utility struct for writing Doubles
+	/// </summary>
+	[StructLayout(LayoutKind.Explicit)]
+	public struct DoubleUlLongUnion
+	{
+		/// <summary>
+		/// Value as a 32 bit float
+		/// </summary>
+		[FieldOffset(0)]
+		public double DoubleValue;
+
+		/// <summary>
+		/// Value as an unsigned 32 bit integer
+		/// </summary>
+		[FieldOffset(0)]
+		[CLSCompliant(false)]
+		public ulong ULongValue;
+	}
+
 	public partial class NetBuffer
 	{
 		/// <summary>
@@ -447,12 +467,20 @@ namespace Lidgren.Network
 			Write(val);
 		}
 #else
+
+		byte[] DoubleArray = new byte[8];
+
 		/// <summary>
 		/// Writes a 64 bit floating point value
 		/// </summary>
 		public void Write(double source)
 		{
-			byte[] val = BitConverter.GetBytes(source);
+			// Ben - fixed leaking GC by converting to bytes array here
+			// by using same system as floats
+			DoubleUlLongUnion union = default(DoubleUlLongUnion);
+			union.DoubleValue = source;
+			
+			//byte[] val = BitConverter.GetBytes(source);
 #if BIGENDIAN
 			// 0 1 2 3   4 5 6 7
 
@@ -473,7 +501,7 @@ namespace Lidgren.Network
 			val[4] = val[3];
 			val[3] = tmp;
 #endif
-			Write(val);
+			Write(union.ULongValue);
 		}
 #endif
 
